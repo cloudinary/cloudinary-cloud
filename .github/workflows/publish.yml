@@ -1,0 +1,138 @@
+name: Publish to npm
+
+# Publishes @cloudinary/sandbox to the PUBLIC npm registry
+# (https://registry.npmjs.org) — never to an internal Nexus mirror.
+# `registry-url` below plus `publishConfig.registry` in package.json pin the
+# target so a misconfigured ~/.npmrc cannot redirect a release.
+
+on:
+  release:
+    types: [published]
+  workflow_dispatch:
+    inputs:
+      dist_tag:
+        description: 'npm dist-tag to publish under'
+        type: choice
+        default: next
+        options:
+          - next
+          - latest
+      dry_run:
+        description: 'Validate and pack only — do not publish'
+        type: boolean
+        default: true
+
+permissions:
+  contents: read
+  id-token: write # OIDC: npm trusted publishing + provenance attestation
+
+concurrency:
+  group: npm-publish
+  cancel-in-progress: false
+
+jobs:
+  publish:
+    runs-on: ubuntu-latest # provenance requires a GitHub-hosted runner
+    timeout-minutes: 15
+    # Gates every publish behind the reviewers configured on this environment.
+    # Configure under Settings → Environments → npm-publish → Required reviewers.
+    environment: npm-publish
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: actions/setup-node@v4
+        with:
+          node-version-file: .nvmrc
+          cache: npm
+          registry-url: 'https://registry.npmjs.org'
+
+      # Trusted publishing (OIDC, no long-lived token) needs npm >= 11.5.1.
+      - name: Use an npm that supports trusted publishing
+        run: npm install -g npm@latest
+
+      - run: npm ci
+
+      # Never publish something that does not build or pass its tests.
+      - run: npm test
+
+      - name: Resolve publish parameters
+        id: params
+        env:
+          EVENT_NAME: ${{ github.event_name }}
+          INPUT_DIST_TAG: ${{ inputs.dist_tag }}
+          RELEASE_TAG: ${{ github.event.release.tag_name }}
+          RELEASE_IS_PRERELEASE: ${{ github.event.release.prerelease }}
+          REPO_VISIBILITY: ${{ github.event.repository.visibility }}
+        run: |
+          set -euo pipefail
+
+          NAME=$(node -p "require('./package.json').name")
+          VERSION=$(node -p "require('./package.json').version")
+          echo "Publishing candidate: $NAME@$VERSION"
+
+          # A GitHub Release drives the dist-tag from its prerelease flag;
+          # a manual run uses the chosen input.
+          if [ "$EVENT_NAME" = "release" ]; then
+            if [ "$RELEASE_IS_PRERELEASE" = "true" ]; then
+              DIST_TAG=next
+            else
+              DIST_TAG=latest
+            fi
+            # The release tag must agree with package.json, or the version the
+            # changelog describes is not the version users install.
+            if [ "${RELEASE_TAG#v}" != "$VERSION" ]; then
+              echo "::error::release tag '$RELEASE_TAG' does not match package.json version '$VERSION'"
+              exit 1
+            fi
+          else
+            DIST_TAG="$INPUT_DIST_TAG"
+          fi
+
+          # Republishing an existing version fails with an opaque 403; say so plainly.
+          if npm view "$NAME@$VERSION" version >/dev/null 2>&1; then
+            echo "::error::$NAME@$VERSION is already on npm. Bump the version first."
+            exit 1
+          fi
+
+          # Provenance attestations are only supported from public repositories.
+          # This repo is currently internal, so publish unsigned until it is public.
+          if [ "$REPO_VISIBILITY" = "public" ]; then
+            echo "provenance_flag=--provenance" >> "$GITHUB_OUTPUT"
+          else
+            echo "provenance_flag=" >> "$GITHUB_OUTPUT"
+            echo "::warning::Repository is '$REPO_VISIBILITY' — publishing WITHOUT provenance. Make it public to get signed provenance."
+          fi
+
+          echo "name=$NAME" >> "$GITHUB_OUTPUT"
+          echo "version=$VERSION" >> "$GITHUB_OUTPUT"
+          echo "dist_tag=$DIST_TAG" >> "$GITHUB_OUTPUT"
+
+      - name: Pack (dry run)
+        run: npm publish --dry-run --tag "${{ steps.params.outputs.dist_tag }}"
+
+      - name: Publish
+        if: inputs.dry_run != true
+        run: |
+          npm publish \
+            --tag "${{ steps.params.outputs.dist_tag }}" \
+            --access public \
+            ${{ steps.params.outputs.provenance_flag }}
+        env:
+          # Fallback for the bootstrap publish. Once a Trusted Publisher is
+          # configured for this package on npmjs.com, OIDC takes over and this
+          # secret can be deleted.
+          NODE_AUTH_TOKEN: ${{ secrets.NPM_TOKEN }}
+
+      - name: Summary
+        if: always()
+        run: |
+          {
+            echo "### ${{ steps.params.outputs.name }}@${{ steps.params.outputs.version }}"
+            echo
+            echo "| | |"
+            echo "|---|---|"
+            echo "| dist-tag | \`${{ steps.params.outputs.dist_tag }}\` |"
+            echo "| registry | https://registry.npmjs.org |"
+            echo "| provenance | ${{ steps.params.outputs.provenance_flag != '' && 'yes' || 'no (repo not public)' }} |"
+            echo "| dry run | ${{ inputs.dry_run == true }} |"
+          } >> "$GITHUB_STEP_SUMMARY"

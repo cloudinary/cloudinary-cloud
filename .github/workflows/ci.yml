@@ -1,0 +1,76 @@
+name: CI
+
+on:
+  pull_request:
+  push:
+    branches: [main]
+
+permissions:
+  contents: read
+
+concurrency:
+  group: ci-${{ github.ref }}
+  cancel-in-progress: true
+
+jobs:
+  test:
+    name: Node ${{ matrix.node }}
+    runs-on: ubuntu-latest
+    timeout-minutes: 10
+    strategy:
+      fail-fast: false
+      matrix:
+        # Lower bound must match "engines.node" in package.json.
+        node: ['20', '22', '24']
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: actions/setup-node@v4
+        with:
+          node-version: ${{ matrix.node }}
+          cache: npm
+
+      - run: npm ci
+
+      # `npm test` builds first, so this also typechecks (tsc --strict).
+      - run: npm test
+
+  package:
+    name: Package contents
+    runs-on: ubuntu-latest
+    timeout-minutes: 10
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: actions/setup-node@v4
+        with:
+          node-version-file: .nvmrc
+          cache: npm
+
+      - run: npm ci
+
+      - run: npm run build
+
+      # Catches packaging regressions (missing dist, stray files) before they
+      # can reach the registry. Runs after build so the tarball is realistic.
+      - name: Tarball contains the published entry points
+        run: |
+          npm pack --dry-run --json > /tmp/pack.json
+          node -e "
+            const files = require('/tmp/pack.json')[0].files.map(f => f.path);
+            const required = ['dist/index.js', 'dist/lib/index.js', 'dist/lib/index.d.ts'];
+            const missing = required.filter(r => !files.includes(r));
+            if (missing.length) {
+              console.error('::error::tarball is missing ' + missing.join(', '));
+              process.exit(1);
+            }
+            console.log('tarball OK — ' + files.length + ' files');
+          "
+
+      - name: Bin entry point is runnable and has a shebang
+        run: |
+          BIN=$(node -p "require('./package.json').bin['cloudinary-sandbox']")
+          head -1 "$BIN" | grep -q '^#!/usr/bin/env node' \
+            || { echo "::error::$BIN is missing its shebang"; exit 1; }
+          node "$BIN" --help > /dev/null
+          node "$BIN" --version > /dev/null

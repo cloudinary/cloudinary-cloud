@@ -17,9 +17,9 @@ it that way; prefer a few lines of local code over a new dependency.
 
 ## Releasing
 
-Releases publish to the **public npm registry** (`registry.npmjs.org`). Both
-`publishConfig.registry` and the workflow's `registry-url` pin this, so a local
-`~/.npmrc` pointing at an internal mirror cannot redirect a release.
+Releases publish to the **public npm registry** (`registry.npmjs.org`), pinned in
+`.npmrc`, `publishConfig.registry`, and the workflow's `registry-url` so an
+internal mirror in `~/.npmrc` can't redirect a release.
 
 ### One-time setup
 

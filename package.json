@@ -1,0 +1,45 @@
+{
+  "name": "@cloudinary/sandbox",
+  "version": "0.1.0",
+  "description": "One command to get a disposable Cloudinary sandbox account — no signup required",
+  "type": "module",
+  "bin": {
+    "cloudinary-sandbox": "./dist/index.js"
+  },
+  "main": "./dist/lib/index.js",
+  "types": "./dist/lib/index.d.ts",
+  "exports": {
+    ".": {
+      "types": "./dist/lib/index.d.ts",
+      "default": "./dist/lib/index.js"
+    }
+  },
+  "files": [
+    "dist"
+  ],
+  "scripts": {
+    "build": "tsc",
+    "dev": "tsc --watch",
+    "test": "npm run build && node --test",
+    "prepublishOnly": "npm run build"
+  },
+  "publishConfig": {
+    "access": "public"
+  },
+  "keywords": [
+    "cloudinary",
+    "sandbox",
+    "ai",
+    "agent",
+    "cli"
+  ],
+  "author": "Cloudinary",
+  "license": "MIT",
+  "engines": {
+    "node": ">=20"
+  },
+  "devDependencies": {
+    "@types/node": "^22.10.0",
+    "typescript": "^5.7.0"
+  }
+}

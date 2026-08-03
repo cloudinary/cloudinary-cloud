@@ -49,7 +49,7 @@ first. Integration tests own their fixture HTTP servers on ephemeral ports.
 
 ## API contract
 
-The contract is still settling ahead of launch — re-check the provisioning OpenAPI schema
-before changing request/response types. Request fields today: `delivery_ips` (required
+Source of truth is the provisioning OpenAPI schema — re-check it before changing
+request/response types. Request fields: `delivery_ips` (required
 array; `"requester_ip"` sentinel allowed as an item), `email`. No TTL parameter.
 Credentials come back in `product_environments[0].api_access_keys[]`.

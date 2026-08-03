@@ -13,8 +13,6 @@ make the account permanent later (same credentials, assets retained).
 Built for AI coding agents: unauthenticated, non-interactive, IP-locked delivery,
 TTL-bounded, rate-limited per IP.
 
-> **Status:** not yet published; the provisioning endpoint is in POC.
-
 ## Usage
 
 ```bash
@@ -90,5 +88,5 @@ Speaks `POST /v1_1/provisioning/clouds` (public, unauthenticated, rate limited p
   `delivery_ips_not_public`, `ip_rate_limit_exceeded`, `global_rate_limit_exceeded`,
   `agent_registration_disabled`.
 
-The API contract is still settling ahead of launch; flags are shaped so contract changes
-absorb without breaking the command surface.
+New response fields flow into `--json` automatically; the command surface treats its
+flags as a stable API.

@@ -8,7 +8,6 @@
 import { userAgent } from './version.js';
 
 export const DEFAULT_API_HOST = 'https://api.cloudinary.com';
-// TODO: provisional path pending the renamed endpoint's final spec.
 export const CLOUDS_PATH = '/v1_1/provisioning/clouds';
 
 /** Array item the server resolves to the request's own source IP. */

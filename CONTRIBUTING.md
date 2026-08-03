@@ -49,6 +49,6 @@ Bump the version, then either:
 - **Manual run** — Actions → *Publish to npm* → *Run workflow*, choosing the
   dist-tag. `dry_run` defaults to **true**; untick it to actually publish.
 
-While the provisioning endpoint is a POC, publish under `next`. `npx
+Publish pre-release or unverified versions under `next`. `npx
 @cloudinary/cloud` resolves `latest`, so tagging an unusable version as
 `latest` hands every public caller a broken command.

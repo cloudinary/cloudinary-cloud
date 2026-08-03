@@ -150,34 +150,22 @@ function withBodyCapture(run) {
   });
 }
 
-const echoOf = ip => async () => new Response(`${ip}\n`, { status: 200 });
-
-test('default sends the observed public IP plus the requester_ip sentinel', () =>
+test('default omits delivery_ips entirely — the server derives the allow-list', () =>
   inTempCwd(() =>
     withBodyCapture(async (host, bodies) => {
-      const result = await runCreate({ apiHost: host, ipEchoFetch: echoOf('94.7.253.136') });
-      assert.deepEqual(bodies[0].delivery_ips, ['94.7.253.136', 'requester_ip']);
-      assert.equal(result.observedIp, '94.7.253.136');
+      await runCreate({ apiHost: host, ipEchoFetch: noEcho });
+      assert.equal('delivery_ips' in bodies[0], false);
     }),
   ));
 
-test('default falls back to requester_ip alone when the IP lookup fails', () =>
-  inTempCwd(() =>
-    withBodyCapture(async (host, bodies) => {
-      const result = await runCreate({ apiHost: host, ipEchoFetch: noEcho });
-      assert.deepEqual(bodies[0].delivery_ips, ['requester_ip']);
-      assert.equal(result.observedIp, null);
-    }),
-  ));
-
-test('explicit --ip values are sent verbatim and skip the lookup', () =>
+test('explicit --ip values are sent verbatim, no lookup involved', () =>
   inTempCwd(() =>
     withBodyCapture(async (host, bodies) => {
       let lookups = 0;
       const countingEcho = async () => { lookups++; return new Response('9.9.9.9', { status: 200 }); };
       await runCreate({ apiHost: host, ip: ['203.0.113.7'], ipEchoFetch: countingEcho });
       assert.deepEqual(bodies[0].delivery_ips, ['203.0.113.7']);
-      assert.equal(lookups, 0);
+      assert.equal(lookups, 0, 'runCreate must not perform the lookup');
     }),
   ));
 

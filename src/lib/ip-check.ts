@@ -10,13 +10,28 @@
 const IP_ECHO_URL = 'https://checkip.amazonaws.com';
 const CHECK_TIMEOUT_MS = 3_000;
 
+/**
+ * True for globally routable addresses only. Corporate proxies and split-DNS
+ * setups can make the echo service return a private address; sending one as a
+ * delivery IP is a guaranteed 400, so those count as "couldn't determine".
+ */
+export function isPublicIp(ip: string): boolean {
+  if (/^(10\.|127\.|0\.|192\.168\.|169\.254\.)/.test(ip)) return false;
+  if (/^172\.(1[6-9]|2\d|3[01])\./.test(ip)) return false;
+  if (/^100\.(6[4-9]|[7-9]\d|1[01]\d|12[0-7])\./.test(ip)) return false; // CGNAT
+  const lower = ip.toLowerCase();
+  if (lower === '::1' || lower.startsWith('fe80:') || lower.startsWith('fc') || lower.startsWith('fd')) return false;
+  return true;
+}
+
 /** This machine's public IP, or null if it can't be determined quickly. Never throws. */
 export async function getObservedPublicIp(fetchImpl: typeof fetch = fetch): Promise<string | null> {
   try {
     const res = await fetchImpl(IP_ECHO_URL, { signal: AbortSignal.timeout(CHECK_TIMEOUT_MS) });
     if (!res.ok) return null;
     const ip = (await res.text()).trim();
-    return /^[0-9a-fA-F.:]+$/.test(ip) ? ip : null;
+    if (!/^[0-9a-fA-F.:]+$/.test(ip)) return null;
+    return isPublicIp(ip) ? ip : null;
   } catch {
     return null;
   }

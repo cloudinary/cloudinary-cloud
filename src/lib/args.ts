@@ -99,9 +99,9 @@ Commands:
 
 Options:
   --ip <address>       public IP allowed to view delivered media (repeatable,
-                       max 3, "requester_ip" for the address the API sees).
-                       Default: this machine's public IP (auto-detected) plus
-                       requester_ip; explicit values skip the detection
+                       max 3). Default: the server locks delivery to the
+                       address the request came from; a warning is printed if
+                       this machine's IP ends up outside the allow-list
   --email <address>    pre-fill the claim page with this email (never verified
                        at creation)
   --goal <text>        what you are building — sent as attribution alongside the

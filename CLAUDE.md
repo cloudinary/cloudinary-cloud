@@ -27,10 +27,10 @@ opens later to keep it. Bin: `cloudinary-cloud`; `create` is the only command an
   failures surface as a `failed` result (never an exception) so a provisioned cloud's
   credentials always reach the output; `--no-env` skips the write. `isEnvExposedToGit`
   backs the gitignore warning.
-- `src/lib/ip-check.ts` — best-effort public-IP echo (3s timeout, never throws). Default
-  `create` sends `[observed-ip, "requester_ip"]` because the API path and delivery path
-  can exit from different addresses (VPN split tunneling; proxies in front of the API);
-  explicit `--ip` skips the lookup, and a post-create mismatch warning covers the rest.
+- `src/lib/ip-check.ts` — best-effort public-IP echo (3s timeout, never throws,
+  private/reserved addresses rejected). Diagnostics only: it never shapes the request.
+  After create it powers the mismatch warning when this machine's IP is outside the
+  returned allow-list (VPN split egress, NAT pools → silent delivery 401 otherwise).
 - `src/commands/create.ts` — `runCreate()` (programmatic core) + `createCommand()` (output + exit
   codes). Refuses to provision when `./.env` already has `CLOUDINARY_URL` — the check runs
   *before* the API call to avoid burning rate-limited clouds; `--force` overrides.

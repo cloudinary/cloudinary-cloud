@@ -16,8 +16,12 @@ export const REQUESTER_IP_SENTINEL = 'requester_ip';
 export const MAX_DELIVERY_IPS = 3;
 
 export interface ProvisionRequest {
-  /** 1-3 entries: public IPs and/or the "requester_ip" sentinel. */
-  deliveryIps: string[];
+  /**
+   * 1-3 entries: public IPs and/or the "requester_ip" sentinel. Omit to let
+   * the server derive the allow-list (it always appends the requester's
+   * resolved address).
+   */
+  deliveryIps?: string[];
   /** Optional pre-fill hint for the claim page; never verified at creation. */
   email?: string;
   /**
@@ -127,15 +131,16 @@ export async function provisionCloud(
   request: ProvisionRequest,
   options: ProvisionOptions = {},
 ): Promise<CloudAccount> {
-  const invalid = validateDeliveryIps(request.deliveryIps);
-  if (invalid) throw new ProvisionError(invalid, 400, 'delivery_ips_invalid', 'user_error');
+  if (request.deliveryIps !== undefined) {
+    const invalid = validateDeliveryIps(request.deliveryIps);
+    if (invalid) throw new ProvisionError(invalid, 400, 'delivery_ips_invalid', 'user_error');
+  }
 
   const host = resolveApiHost(options.apiHost);
   const doFetch = options.fetchImpl ?? fetch;
 
-  const body: Record<string, unknown> = {
-    delivery_ips: request.deliveryIps,
-  };
+  const body: Record<string, unknown> = {};
+  if (request.deliveryIps !== undefined) body.delivery_ips = request.deliveryIps;
   if (request.email !== undefined) body.email = request.email;
   for (const [key, value] of Object.entries(request.agentMetadata ?? {})) {
     if (value) body[key] = value;

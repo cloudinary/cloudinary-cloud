@@ -37,7 +37,12 @@ export function writeCloudEnv(
   if (entries.expiresAt) pairs.push([EXPIRES_AT_KEY, entries.expiresAt]);
 
   if (!existsSync(envPath)) {
-    writeFileSync(envPath, pairs.map(([k, v]) => `${k}=${v}`).join('\n') + '\n', 'utf-8');
+    // Owner-only: the file holds a live API secret. Applies on creation only —
+    // a pre-existing .env keeps whatever permissions the user gave it.
+    writeFileSync(envPath, pairs.map(([k, v]) => `${k}=${v}`).join('\n') + '\n', {
+      encoding: 'utf-8',
+      mode: 0o600,
+    });
     return { action: 'created' };
   }
 

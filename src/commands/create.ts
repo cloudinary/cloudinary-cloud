@@ -4,7 +4,6 @@ import {
   provisionCloud,
   getCloudinaryUrl,
   ProvisionError,
-  REQUESTER_IP_SENTINEL,
   type ProvisionRequest,
   type CloudAccount,
 } from '../lib/provision.js';
@@ -34,8 +33,6 @@ export interface CreateResult {
   cloudinaryUrl: string;
   envPath: string;
   envResult: EnvWriteResult;
-  /** This machine's public IP as seen from outside, when it could be determined. */
-  observedIp: string | null;
 }
 
 /**
@@ -43,21 +40,11 @@ export interface CreateResult {
  * Programmatic core shared by the `create` command and @cloudinary/dev-cli.
  */
 export async function runCreate(options: CreateOptions): Promise<CreateResult> {
-  // Default allow-list: this machine's externally observed IP plus the server-
-  // resolved requester IP. The two can differ (VPN split paths, proxies in
-  // front of the API), and delivery only works from addresses in the list —
-  // including the observed IP keeps the create→view loop working either way.
-  // Explicit --ip values are used verbatim and skip the lookup.
-  let observedIp: string | null = null;
-  let deliveryIps: string[];
-  if (options.ip && options.ip.length > 0) {
-    deliveryIps = options.ip;
-  } else {
-    observedIp = await getObservedPublicIp(options.ipEchoFetch ?? fetch);
-    deliveryIps = observedIp ? [observedIp, REQUESTER_IP_SENTINEL] : [REQUESTER_IP_SENTINEL];
-  }
-
-  const request: ProvisionRequest = { deliveryIps };
+  // Default: omit delivery_ips — the server derives the allow-list from the
+  // requester's resolved address. Explicit --ip values are sent verbatim.
+  // (The public-IP lookup is diagnostics-only; see the post-create warning.)
+  const request: ProvisionRequest = {};
+  if (options.ip && options.ip.length > 0) request.deliveryIps = options.ip;
 
   if (options.email !== undefined) request.email = options.email;
 
@@ -97,7 +84,7 @@ export async function runCreate(options: CreateOptions): Promise<CreateResult> {
     }
   }
 
-  return { account, cloudinaryUrl, envPath, envResult, observedIp };
+  return { account, cloudinaryUrl, envPath, envResult };
 }
 
 /** CLI action wrapper: output + exit codes around runCreate. */
@@ -120,12 +107,12 @@ export async function createCommand(options: CreateOptions): Promise<void> {
       console.error(pc.yellow('Warning: .env is not covered by .gitignore here — add it before committing.'));
     }
 
-    // Delivery is IP-locked; if this machine isn't in the final allow-list (an
-    // explicit --ip list that excludes it, or the server dropped the observed
-    // IP), say so now rather than letting the first media request 401
-    // mysteriously. Explicit --ip runs need the lookup here since runCreate
-    // skipped it.
-    const observed = result.observedIp ?? (options.ip?.length ? await getObservedPublicIp(options.ipEchoFetch ?? fetch) : null);
+    // Diagnostics only: delivery is IP-locked to the allow-list the server
+    // returned. If this machine's externally observed IP isn't in it (VPN
+    // split egress, NAT pools), the first media request would 401 with no
+    // explanation — warn now with the exact fix instead. Never shapes the
+    // request; failure to determine the IP just means no warning.
+    const observed = await getObservedPublicIp(options.ipEchoFetch ?? fetch);
     const mismatch = deliveryIpMismatchWarning(result.account.delivery_ips ?? [], observed);
     if (mismatch) console.error(pc.yellow(`Warning: ${mismatch}`));
   } catch (err) {

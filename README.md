@@ -41,11 +41,11 @@ Running with no arguments defaults to `create`.
   a provisioned cloud is never swallowed by a filesystem error.
 - If `.env` isn't covered by `.gitignore` in a git repo, `create` warns after writing.
 - Cloud media delivery is locked at the CDN edge to `delivery_ips`. By default the CLI
-  auto-detects this machine's public IP and sends it together with the `requester_ip`
-  sentinel — covering both the caller-is-viewer case and setups where the API path and
-  the delivery path exit from different addresses (VPNs, proxies). Explicit `--ip` values
-  are sent verbatim and skip the detection; if the detected IP ends up outside the final
-  allow-list, `create` warns with the exact fix.
+  sends none and the server locks delivery to the address the request came from — the
+  right default when the caller is also the viewer. Explicit `--ip` values are sent
+  verbatim. After creation the CLI checks (best-effort) whether this machine's public IP
+  is in the returned allow-list, and warns with the exact fix if not — the API path and
+  the delivery path can exit from different addresses behind VPNs and NAT pools.
 - The claim URL and expiry are persisted to `.env` too (`CLOUDINARY_CLOUD_CLAIM_URL`,
   `CLOUDINARY_CLOUD_EXPIRES_AT`), so the claim path survives lost terminal output.
 - Cloud lifetime is server-controlled (no TTL parameter in the API).
@@ -80,7 +80,8 @@ CLOUDINARY_API_HOST=https://staging.example node dist/index.js create
 
 Speaks `POST /v1_1/provisioning/clouds` (public, unauthenticated, rate limited per IP):
 
-- Request: `delivery_ips` (required; array of 1–3 public IPs and/or `"requester_ip"`),
+- Request: `delivery_ips` (optional; array of 1–3 public IPs and/or `"requester_ip"` —
+  the server always appends the requester's resolved address),
   `email` (optional, unverified pre-fill). No TTL parameter — lifetime is server-set.
 - Response: `id`, `email`, `expires_at`, `delivery_ips`, `claim_url`, `guidance`, and
   credentials in `product_environments[0].api_access_keys[]` (`key`/`secret`).

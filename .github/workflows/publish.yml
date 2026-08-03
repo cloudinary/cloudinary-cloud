@@ -1,7 +1,7 @@
 name: Publish to npm
 
 # Publishes @cloudinary/cloud to the PUBLIC npm registry
-# (https://registry.npmjs.org) — never to an internal Nexus mirror.
+# (https://registry.npmjs.org) — never to an internal registry mirror.
 # `registry-url` below plus `publishConfig.registry` in package.json pin the
 # target so a misconfigured ~/.npmrc cannot redirect a release.
 
@@ -38,17 +38,21 @@ jobs:
     # Configure under Settings → Environments → npm-publish → Required reviewers.
     environment: npm-publish
     steps:
-      - uses: actions/checkout@v4
+      # Actions are pinned to commit SHAs so a hijacked upstream tag cannot
+      # run code in the job that holds the publish credential.
+      - uses: actions/checkout@11d5960a326750d5838078e36cf38b85af677262 # v4.4.0
 
-      - uses: actions/setup-node@v4
+      - uses: actions/setup-node@49933ea5288caeca8642d1e84afbd3f7d6820020 # v4.4.0
         with:
           node-version-file: .nvmrc
           cache: npm
           registry-url: 'https://registry.npmjs.org'
 
       # Trusted publishing (OIDC, no long-lived token) needs npm >= 11.5.1.
+      # Pinned (not @latest) so the publish job never runs a freshly-minted,
+      # unreviewed npm release.
       - name: Use an npm that supports trusted publishing
-        run: npm install -g npm@latest
+        run: npm install -g npm@12.0.2
 
       - run: npm ci
 

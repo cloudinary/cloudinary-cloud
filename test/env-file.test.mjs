@@ -1,6 +1,6 @@
 import { test } from 'node:test';
 import assert from 'node:assert/strict';
-import { mkdtempSync, mkdirSync, readFileSync, writeFileSync } from 'node:fs';
+import { mkdtempSync, mkdirSync, readFileSync, statSync, writeFileSync } from 'node:fs';
 import { tmpdir } from 'node:os';
 import { join, dirname } from 'node:path';
 import { writeCloudEnv, readCloudEnv, hasCloudinaryUrl, isEnvExposedToGit } from '../dist/lib/env-file.js';
@@ -17,6 +17,12 @@ test('creates .env when missing', () => {
   const result = writeCloudEnv(envPath, { cloudinaryUrl: URL_A });
   assert.equal(result.action, 'created');
   assert.equal(readFileSync(envPath, 'utf-8'), `CLOUDINARY_URL=${URL_A}\n`);
+});
+
+test('creates .env owner-readable only', { skip: process.platform === 'win32' }, () => {
+  const envPath = tempEnvPath();
+  writeCloudEnv(envPath, { cloudinaryUrl: URL_A });
+  assert.equal(statSync(envPath).mode & 0o777, 0o600);
 });
 
 test('appends to existing .env without CLOUDINARY_URL', () => {

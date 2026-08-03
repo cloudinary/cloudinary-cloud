@@ -26,7 +26,8 @@
   },
   "homepage": "https://github.com/cloudinary/cloudinary-cloud#readme",
   "scripts": {
-    "build": "tsc",
+    "build": "npm run clean && tsc",
+    "clean": "node -e \"fs.rmSync('dist', { recursive: true, force: true })\"",
     "dev": "tsc --watch",
     "test": "npm run build && node --test",
     "prepack": "npm run build"

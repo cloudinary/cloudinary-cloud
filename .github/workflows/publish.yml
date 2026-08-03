@@ -1,6 +1,6 @@
 name: Publish to npm
 
-# Publishes @cloudinary/sandbox to the PUBLIC npm registry
+# Publishes @cloudinary/cloud to the PUBLIC npm registry
 # (https://registry.npmjs.org) — never to an internal Nexus mirror.
 # `registry-url` below plus `publishConfig.registry` in package.json pin the
 # target so a misconfigured ~/.npmrc cannot redirect a release.

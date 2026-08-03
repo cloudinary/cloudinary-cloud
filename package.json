@@ -19,12 +19,12 @@
   ],
   "repository": {
     "type": "git",
-    "url": "git+https://github.com/cloudinary/cloudinary-sandbox.git"
+    "url": "git+https://github.com/cloudinary/cloudinary-cloud.git"
   },
   "bugs": {
-    "url": "https://github.com/cloudinary/cloudinary-sandbox/issues"
+    "url": "https://github.com/cloudinary/cloudinary-cloud/issues"
   },
-  "homepage": "https://github.com/cloudinary/cloudinary-sandbox#readme",
+  "homepage": "https://github.com/cloudinary/cloudinary-cloud#readme",
   "scripts": {
     "build": "tsc",
     "dev": "tsc --watch",

@@ -69,7 +69,7 @@ jobs:
 
       - name: Bin entry point is runnable and has a shebang
         run: |
-          BIN=$(node -p "require('./package.json').bin['cloudinary-sandbox']")
+          BIN=$(node -p "require('./package.json').bin['cloudinary-cloud']")
           head -1 "$BIN" | grep -q '^#!/usr/bin/env node' \
             || { echo "::error::$BIN is missing its shebang"; exit 1; }
           node "$BIN" --help > /dev/null

@@ -25,10 +25,10 @@ internal mirror in `~/.npmrc` can't redirect a release.
 
 1. **Bootstrap the package name.** npm can only attach a Trusted Publisher to a
    package that already exists, so the very first publish needs a token:
-   add a granular-access `NPM_TOKEN` (scoped to `@cloudinary/sandbox`, publish
+   add a granular-access `NPM_TOKEN` (scoped to `@cloudinary/cloud`, publish
    permission) as a repository secret, then run the workflow once.
 2. **Switch to trusted publishing.** On npmjs.com → the package → *Settings* →
-   *Trusted Publisher*, add: GitHub Actions, `cloudinary/cloudinary-sandbox`,
+   *Trusted Publisher*, add: GitHub Actions, `cloudinary/cloudinary-cloud`,
    workflow `publish.yml`, environment `npm-publish`. Then delete the
    `NPM_TOKEN` secret — OIDC replaces it and there is no long-lived credential
    left to leak.
@@ -50,5 +50,5 @@ Bump the version, then either:
   dist-tag. `dry_run` defaults to **true**; untick it to actually publish.
 
 While the provisioning endpoint is a POC, publish under `next`. `npx
-@cloudinary/sandbox` resolves `latest`, so tagging an unusable version as
+@cloudinary/cloud` resolves `latest`, so tagging an unusable version as
 `latest` hands every public caller a broken command.

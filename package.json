@@ -4,7 +4,7 @@
   "description": "One command to get a disposable Cloudinary cloud account — no signup required",
   "type": "module",
   "bin": {
-    "cloudinary-cloud": "./dist/index.js"
+    "cloudinary-cloud": "dist/index.js"
   },
   "main": "./dist/lib/index.js",
   "types": "./dist/lib/index.d.ts",

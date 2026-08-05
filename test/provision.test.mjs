@@ -127,6 +127,61 @@ test('posts the contract-shaped body and parses the response', async () => {
   assert.deepEqual(captured, { delivery_ips: ['requester_ip'], email: 'dev@example.com' });
 });
 
+// Live shape since 2026-08: the environment's fields arrive flattened onto the
+// account object, with no product_environments array.
+const FLAT_RESPONSE = {
+  account_id: 'acct2',
+  email: 'x@cloud.cloudinary.invalid',
+  cloud_name: 'cloud-flat',
+  api_key: 'flatkey',
+  api_secret: 'flatsecret',
+  api_environment_variable: 'CLOUDINARY_URL=cloudinary://flatkey:flatsecret@cloud-flat',
+  claimed: false,
+  expires_at: '2026-01-01T00:00:00Z',
+  delivery_ips: ['203.0.113.7'],
+  claim_url: 'https://console.cloudinary.com/claim?token=t',
+  guidance: 'Use it before it expires.',
+};
+
+test('normalizes the flattened response shape', async () => {
+  await withStub(
+    (req, res) => {
+      req.on('data', () => {});
+      req.on('end', () => {
+        res.writeHead(200, { 'Content-Type': 'application/json' });
+        res.end(JSON.stringify(FLAT_RESPONSE));
+      });
+    },
+    async host => {
+      const account = await provisionCloud({}, { apiHost: host });
+      const env = account.product_environments[0];
+      assert.equal(env.cloud_name, 'cloud-flat');
+      assert.equal(getCloudinaryUrl(env), 'cloudinary://flatkey:flatsecret@cloud-flat');
+      assert.equal(getActiveAccessKey(env).key, 'flatkey');
+      assert.equal(account.claim_url, FLAT_RESPONSE.claim_url);
+      assert.equal(account.expires_at, FLAT_RESPONSE.expires_at);
+    },
+  );
+});
+
+test('unrecognized success shape throws with the raw response preserved', async () => {
+  await withStub(
+    (req, res) => {
+      req.on('data', () => {});
+      req.on('end', () => {
+        res.writeHead(200, { 'Content-Type': 'application/json' });
+        res.end(JSON.stringify({ unexpected: true, api_secret: 'keep-me' }));
+      });
+    },
+    async host => {
+      await assert.rejects(
+        provisionCloud({}, { apiHost: host }),
+        err => err instanceof ProvisionError && /keep-me/.test(err.message) && /not recognized/.test(err.message),
+      );
+    },
+  );
+});
+
 test('omits email when not supplied', async () => {
   let captured;
   await withStub(

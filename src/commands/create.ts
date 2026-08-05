@@ -9,7 +9,7 @@ import {
 } from '../lib/provision.js';
 import { writeCloudEnv, hasCloudinaryUrl, isEnvExposedToGit, type EnvWriteResult } from '../lib/env-file.js';
 import { printHumanSummary, printPlainSummary } from '../lib/output.js';
-import { getObservedPublicIp, deliveryIpMismatchWarning } from '../lib/ip-check.js';
+import { getObservedPublicIp, deliveryIpMismatchWarning, privateRequesterHint } from '../lib/ip-check.js';
 import { detectAgentMetadata } from '../lib/agent-metadata.js';
 
 export interface CreateOptions {
@@ -117,6 +117,9 @@ export async function createCommand(options: CreateOptions): Promise<void> {
     if (mismatch) console.error(pc.yellow(`Warning: ${mismatch}`));
   } catch (err) {
     if (err instanceof ProvisionError) {
+      const requesterHint = err.code === 'delivery_ips_not_public'
+        ? privateRequesterHint(err.message, options.ip)
+        : null;
       // --json callers parse stdout; give them the API's error envelope shape.
       if (options.json) {
         console.log(JSON.stringify({
@@ -124,6 +127,7 @@ export async function createCommand(options: CreateOptions): Promise<void> {
             category: err.category ?? 'error',
             ...(err.code ? { code: err.code } : {}),
             message: err.message,
+            ...(requesterHint ? { hint: requesterHint } : {}),
           },
         }, null, 2));
         process.exit(1);
@@ -134,6 +138,8 @@ export async function createCommand(options: CreateOptions): Promise<void> {
         console.error(pc.dim('A rate limit was hit. Wait a while before provisioning another cloud.'));
       } else if (err.code === 'agent_registration_disabled') {
         console.error(pc.dim('Cloud provisioning is currently disabled by Cloudinary.'));
+      } else if (requesterHint) {
+        console.error(pc.dim(requesterHint));
       }
       process.exit(1);
     }

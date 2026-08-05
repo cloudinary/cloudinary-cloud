@@ -51,6 +51,11 @@ Running with no arguments defaults to `create`.
 - Cloud lifetime is server-controlled (no TTL parameter in the API).
 - Unclaimed clouds are reaped at `expires_at`, assets included. Claiming (a human opens
   `claim_url` and verifies an email) makes the account permanent with the same API key.
+- **Behind a corporate VPN or secure gateway (e.g. Cloudflare WARP)** the API may see the
+  request arriving from a private address and refuse with `delivery_ips_not_public` —
+  the requester's address is always part of the delivery allow-list, so `--ip` cannot
+  avoid it. Re-run from a connection the gateway does not route (pause the VPN for the
+  one command, or use another network or host).
 
 ## Library API
 

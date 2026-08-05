@@ -4,7 +4,10 @@ import { createServer } from 'node:http';
 import { mkdtempSync, mkdirSync, readFileSync, writeFileSync } from 'node:fs';
 import { tmpdir } from 'node:os';
 import { join } from 'node:path';
+import { execFile } from 'node:child_process';
 import { runCreate, ProvisionError } from '../dist/lib/index.js';
+// Deliberately not part of the public library surface — imported from the module.
+import { privateRequesterHint } from '../dist/lib/ip-check.js';
 
 const noEcho = async () => { throw new Error('offline'); };
 
@@ -120,6 +123,117 @@ test('an unwritable .env never swallows the credentials', () =>
       assert.ok(result.envResult.reason.length > 0);
       assert.equal(result.cloudinaryUrl, 'cloudinary://key:secret@cloud-abc');
       assert.equal(result.account.claim_url, 'https://console.cloudinary.com/claim?token=t');
+    }),
+  ));
+
+// --- delivery_ips_not_public guidance ---
+
+test('derived private requester IP produces the gateway hint', () => {
+  const hint = privateRequesterHint('delivery IP must be public: 10.16.231.234', undefined);
+  assert.match(hint, /10\.16\.231\.234/);
+  assert.match(hint, /VPN|WARP/);
+  assert.match(hint, /not a\s+security block/);
+  assert.match(hint, /do not change network/);
+});
+
+test('no hint when the user passed the rejected private IP themselves', () => {
+  assert.equal(privateRequesterHint('delivery IP must be public: 10.0.0.5', ['10.0.0.5']), null);
+});
+
+test('IPv6 forms are compared normalized, not textually', () => {
+  assert.equal(
+    privateRequesterHint(
+      'delivery IP must be public: FD00:0000:0000:0000:0000:0000:0000:0001',
+      ['fd00::1'],
+    ),
+    null,
+  );
+});
+
+test('a derived private IP hints even when a user-supplied IP appears first in the message', () => {
+  const hint = privateRequesterHint(
+    'delivery IPs rejected: 203.0.113.7 is allowed but 10.16.231.234 must be public',
+    ['203.0.113.7'],
+  );
+  assert.match(hint, /10\.16\.231\.234/);
+});
+
+test('no hint when every rejected address is public — the private-address story would be wrong', () => {
+  assert.equal(privateRequesterHint('delivery IP must be public: 203.0.113.7', undefined), null);
+});
+
+test('unparseable message: hint only when the server had to derive (no --ip given)', () => {
+  assert.match(privateRequesterHint('delivery IP must be public', undefined), /VPN|WARP/);
+  assert.equal(privateRequesterHint('delivery IP must be public', ['203.0.113.7']), null);
+});
+
+test('times and stray hex in prose are not mistaken for IPv6', () => {
+  assert.match(privateRequesterHint('rejected at 10:30:45 near node bad:beef', undefined), /VPN|WARP/);
+});
+
+// --- CLI integration: the hint reaches real output ---
+
+const CLI_BIN = new URL('../dist/index.js', import.meta.url).pathname;
+
+function withNotPublicStub(run) {
+  return new Promise((resolve, reject) => {
+    const server = createServer((req, res) => {
+      req.on('data', () => {});
+      req.on('end', () => {
+        res.writeHead(400, { 'Content-Type': 'application/json' });
+        res.end(JSON.stringify({
+          error: {
+            category: 'user_error',
+            code: 'delivery_ips_not_public',
+            message: 'delivery IP must be public: 10.16.231.234',
+          },
+        }));
+      });
+    });
+    server.listen(0, async () => {
+      const host = `http://localhost:${server.address().port}`;
+      try {
+        resolve(await run(host));
+      } catch (err) {
+        reject(err);
+      } finally {
+        server.close();
+      }
+    });
+  });
+}
+
+function runCli(args, apiHost, cwd) {
+  return new Promise(resolve => {
+    execFile(
+      process.execPath,
+      [CLI_BIN, ...args],
+      { cwd, env: { ...process.env, CLOUDINARY_API_HOST: apiHost, NO_COLOR: '1' } },
+      (err, stdout, stderr) => resolve({ code: err?.code ?? 0, stdout, stderr }),
+    );
+  });
+}
+
+test('--json error envelope carries the hint field', () =>
+  inTempCwd(dir =>
+    withNotPublicStub(async host => {
+      const { code, stdout } = await runCli(['--json'], host, dir);
+      assert.equal(code, 1);
+      const payload = JSON.parse(stdout);
+      assert.equal(payload.error.code, 'delivery_ips_not_public');
+      assert.match(payload.error.hint, /not a\s+security block/);
+      assert.match(payload.error.hint, /do not change network/);
+    }),
+  ));
+
+test('human mode prints the hint to stderr after the error line', () =>
+  inTempCwd(dir =>
+    withNotPublicStub(async host => {
+      const { code, stderr } = await runCli([], host, dir);
+      assert.equal(code, 1);
+      assert.match(stderr, /delivery IP must be public/);
+      assert.match(stderr, /VPN|WARP/);
+      assert.match(stderr, /report this to the\s+user/);
     }),
   ));
 

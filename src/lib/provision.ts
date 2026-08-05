@@ -182,7 +182,29 @@ export async function provisionCloud(
     throw new ProvisionError(message, res.status, code, category);
   }
 
-  return (await res.json()) as CloudAccount;
+  return normalizeAccount(await res.json());
+}
+
+/**
+ * The API has served the cloud's environment both nested (product_environments[])
+ * and flattened onto the account object itself. Normalize to the nested shape so
+ * every consumer reads one contract. Throwing here must include the raw response:
+ * the cloud already exists, so an unrecognized shape must never cost the caller
+ * their only copy of its credentials.
+ */
+function normalizeAccount(raw: unknown): CloudAccount {
+  const account = raw as CloudAccount & ProductEnvironment;
+  if (Array.isArray(account.product_environments) && account.product_environments.length > 0) {
+    return account;
+  }
+  if (typeof account.cloud_name === 'string' && account.cloud_name !== '') {
+    account.product_environments = [account];
+    return account;
+  }
+  throw new ProvisionError(
+    `Provisioning succeeded but the response shape was not recognized. Raw response (keep it — it may contain your credentials): ${JSON.stringify(raw)}`,
+    0,
+  );
 }
 
 /** The credentials the CLI surfaces, tolerant of every response shape seen so far. */

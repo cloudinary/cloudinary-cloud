@@ -22,6 +22,8 @@ export interface CreateOptions {
   env?: boolean;
   /** What the agent is building; sent as agent_goal attribution when provided. */
   goal?: string;
+  /** The LLM model driving the session; overrides env detection (which usually finds nothing). */
+  model?: string;
   /** Set false (--no-agent-metadata) to omit attribution fields entirely. */
   agentMetadata?: boolean;
   /** Test seam for the public-IP echo lookup. */
@@ -51,6 +53,7 @@ export async function runCreate(options: CreateOptions): Promise<CreateResult> {
   // Experimental agent attribution — remove with lib/agent-metadata.ts.
   if (options.agentMetadata !== false) {
     request.agentMetadata = detectAgentMetadata(process.env, options.goal);
+    if (options.model) request.agentMetadata.agent_llm_model = options.model;
   }
 
   const envPath = join(process.cwd(), '.env');

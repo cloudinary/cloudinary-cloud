@@ -11,7 +11,7 @@ test('parses all flags, space and equals forms', () => {
   const parsed = parseArgs([
     'create', '--ip', '203.0.113.7', '--ip=requester_ip',
     '--email=dev@example.com', '--force', '--no-env', '--json',
-    '--goal', 'add image optimization', '--no-agent-metadata',
+    '--goal', 'add image optimization', '--model=claude-fable-5', '--no-agent-metadata',
     '--api-host', 'http://localhost:9999',
   ]);
   assert.equal(parsed.kind, 'create');
@@ -22,6 +22,7 @@ test('parses all flags, space and equals forms', () => {
     env: false,
     json: true,
     goal: 'add image optimization',
+    model: 'claude-fable-5',
     agentMetadata: false,
     apiHost: 'http://localhost:9999',
   });

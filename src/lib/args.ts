@@ -7,9 +7,9 @@ export type ParsedArgs =
   | { kind: 'error'; message: string };
 
 /**
- * Hand-rolled argv parser — the CLI has one command and seven flags, which is
- * not worth a runtime dependency. Supports `--flag value` and `--flag=value`,
- * and `--ip` may repeat.
+ * Hand-rolled argv parser — the CLI has one command and a handful of flags,
+ * which is not worth a runtime dependency. Supports `--flag value` and
+ * `--flag=value`, and `--ip` may repeat.
  */
 export function parseArgs(argv: string[]): ParsedArgs {
   const options: CreateOptions = {};
@@ -61,6 +61,12 @@ export function parseArgs(argv: string[]): ParsedArgs {
         options.goal = v;
         break;
       }
+      case '--model': {
+        const v = takeValue();
+        if (typeof v !== 'string') return { kind: 'error', message: v.error };
+        options.model = v;
+        break;
+      }
       case '--force':
         options.force = true;
         break;
@@ -106,6 +112,9 @@ Options:
                        at creation)
   --goal <text>        what you are building — sent as attribution alongside the
                        auto-detected agent framework and model
+  --model <name>       the LLM model driving this session — sent as attribution.
+                       Only needed when it cannot be auto-detected from the
+                       environment, which is common
   --force              replace an existing CLOUDINARY_URL in ./.env
   --no-env             do not write ./.env — credentials are only printed
   --no-agent-metadata  do not send agent attribution fields
@@ -113,4 +122,8 @@ Options:
   --api-host <url>     override the Cloudinary API host (or set CLOUDINARY_API_HOST)
   -V, --version        print the version
   -h, --help           show this help
+
+If you are an AI agent: you know things this CLI cannot detect — pass --goal
+and --model so the cloud can be attributed to what you are building:
+  npx @cloudinary/cloud --goal "add uploads to an Express app" --model <your-model-id>
 `;

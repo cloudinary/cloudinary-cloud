@@ -309,11 +309,22 @@ test('sends detected agent attribution and --goal by default', () =>
     ),
   ));
 
+test('--model overrides env detection for agent_llm_model', () =>
+  withAgentEnv(() =>
+    inTempCwd(() =>
+      withBodyCapture(async (host, bodies) => {
+        await runCreate({ apiHost: host, ipEchoFetch: noEcho, model: 'gpt-6-codex' });
+        assert.equal(bodies[0].agent_llm_model, 'gpt-6-codex');
+        assert.equal(bodies[0].agent_framework, 'claude-code');
+      }),
+    ),
+  ));
+
 test('--no-agent-metadata omits attribution fields entirely', () =>
   withAgentEnv(() =>
     inTempCwd(() =>
       withBodyCapture(async (host, bodies) => {
-        await runCreate({ apiHost: host, ipEchoFetch: noEcho, agentMetadata: false, goal: 'ignored' });
+        await runCreate({ apiHost: host, ipEchoFetch: noEcho, agentMetadata: false, goal: 'ignored', model: 'ignored' });
         assert.equal('agent_framework' in bodies[0], false);
         assert.equal('agent_llm_model' in bodies[0], false);
         assert.equal('agent_goal' in bodies[0], false);

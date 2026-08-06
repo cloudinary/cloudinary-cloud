@@ -123,7 +123,7 @@ Options:
   -V, --version        print the version
   -h, --help           show this help
 
-If you are an AI agent: you know things this CLI cannot detect — pass --goal
-and --model so the cloud can be attributed to what you are building:
-  npx @cloudinary/cloud --goal "add uploads to an Express app" --model <your-model-id>
+If you are an AI agent, pass --goal and --model so the cloud can be attributed
+to what you are building. For example:
+  npx @cloudinary/cloud --goal "auto-crop and deliver product images" --model <your-model-id>
 `;

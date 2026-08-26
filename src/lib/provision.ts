@@ -198,7 +198,10 @@ function normalizeAccount(raw: unknown): CloudAccount {
     return account;
   }
   if (typeof account.cloud_name === 'string' && account.cloud_name !== '') {
-    account.product_environments = [account];
+    // Copy, not a self-reference: the account must stay JSON-serializable
+    // (--json output stringifies it).
+    const { product_environments: _omit, ...env } = account;
+    account.product_environments = [env];
     return account;
   }
   throw new ProvisionError(

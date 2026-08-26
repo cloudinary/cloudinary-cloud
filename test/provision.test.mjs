@@ -164,6 +164,24 @@ test('normalizes the flattened response shape', async () => {
   );
 });
 
+test('flattened response normalizes without circular references (--json serializes it)', async () => {
+  await withStub(
+    (req, res) => {
+      req.on('data', () => {});
+      req.on('end', () => {
+        res.writeHead(200, { 'Content-Type': 'application/json' });
+        res.end(JSON.stringify(FLAT_RESPONSE));
+      });
+    },
+    async host => {
+      const account = await provisionCloud({}, { apiHost: host });
+      const serialized = JSON.parse(JSON.stringify(account));
+      assert.equal(serialized.product_environments[0].cloud_name, 'cloud-flat');
+      assert.equal(serialized.product_environments[0].product_environments, undefined);
+    },
+  );
+});
+
 test('unrecognized success shape throws with the raw response preserved', async () => {
   await withStub(
     (req, res) => {

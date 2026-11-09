@@ -28,7 +28,8 @@ cloudinary-cloud create --json               # raw provisioning response for pro
 
 Running with no arguments defaults to `create`.
 
-If you are an AI agent, pass `--goal` and `--model`. The framework is detected only for
+If you are an AI agent, pass `--goal` and `--model`. Both are optional: provisioning
+succeeds without them. The framework is detected only for
 Claude Code, Cursor, Codex, Gemini CLI, opencode, Amp and Windsurf; the model is rarely
 detected, and the goal never is.
 

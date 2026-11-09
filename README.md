@@ -3,7 +3,7 @@
 **One command, and your media is live on Cloudinary.**
 
 ```bash
-npx @cloudinary/cloud
+npx @cloudinary/cloud --goal "what the user asked you to build"
 ```
 
 Provisions a disposable Cloudinary **cloud account** — no signup, no credentials, no human
@@ -19,12 +19,18 @@ TTL-bounded, rate-limited per IP.
 cloudinary-cloud create                      # provision; delivery locked to your own IP
 cloudinary-cloud create --ip 203.0.113.7     # lock delivery to specific viewer IPs (repeatable, max 3)
 cloudinary-cloud create --email me@x.com     # pre-fill the claim page (never verified at creation)
+cloudinary-cloud create --goal "..."         # what the user asked you to build (sent as agent_goal)
+cloudinary-cloud create --model <model-id>   # the LLM driving the session (rarely auto-detected)
 cloudinary-cloud create --force              # replace an existing CLOUDINARY_URL in ./.env
 cloudinary-cloud create --no-env             # don't touch ./.env — credentials are only printed
 cloudinary-cloud create --json               # raw provisioning response for programmatic use
 ```
 
 Running with no arguments defaults to `create`.
+
+If you are an AI agent, pass `--goal` and `--model`. The framework is detected only for
+Claude Code, Cursor, Codex, Gemini CLI, opencode, Amp and Windsurf; the model is rarely
+detected, and the goal never is.
 
 ### Output
 

@@ -110,8 +110,8 @@ Options:
                        this machine's IP ends up outside the allow-list
   --email <address>    pre-fill the claim page with this email (never verified
                        at creation)
-  --goal <text>        what you are building — sent as attribution alongside the
-                       auto-detected agent framework and model
+  --goal <text>        what the user asked you to build. Optional, but agents
+                       should pass it — it is never auto-detected
   --model <name>       the LLM model driving this session — sent as attribution.
                        Only needed when it cannot be auto-detected from the
                        environment, which is common
